@@ -1,0 +1,37 @@
+name: Shellcheck & Deploy Pages
+
+# 触发条件：推送到 main 分支或合并 PR 到 main 分支
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  # 任务1：用 shellcheck 检查所有 shell 脚本
+  shellcheck:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 拉取代码
+        uses: actions/checkout@v4  # 拉取当前仓库代码
+
+      - name: 运行 shellcheck 检查
+        uses: ludeeus/action-shellcheck@master  # 第三方 shellcheck 动作
+        with:
+          severity: error  # 只报告错误级别问题（忽略警告）
+          additional_files: ./scripts  # 检查 scripts 目录下的文件
+
+  # 任务2：部署到 GitHub Pages（依赖任务1成功）
+  deploy:
+    needs: shellcheck  # 只有 shellcheck 成功后才执行部署
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'  # 只在 main 分支推送时部署
+    steps:
+      - name: 拉取代码
+        uses: actions/checkout@v4
+
+      - name: 部署到 GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4  # 第三方部署动作
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}  # 自动生成的令牌
+          publish_dir: .  # 发布当前目录的所有文件（包含 index.html）
